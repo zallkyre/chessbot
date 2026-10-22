@@ -81,26 +81,31 @@ only — do not expose it to the internet as-is.
 
 ## Install
 
-The package is not on PyPI. Clone and use it:
+```powershell
+pip install "git+https://github.com/zallkyre/chessbot@v0.1.0"
+```
+
+Pin the tag, or drop `@v0.1.0` for whatever `main` is that day. Not on PyPI.
+
+Then point it at Stockfish, which is not bundled (98 MB):
+
+```powershell
+# official build, Windows x64
+curl -L -o sf.zip https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-windows-x86-64-universal.zip
+tar -xf sf.zip
+$env:CHESSBOT_ENGINE = "C:\path\to\stockfish-windows-x86-64-universal.exe"
+```
+
+Lookup order: `CHESSBOT_ENGINE` → `engine/stockfish[.exe]` in the package →
+`%LOCALAPPDATA%\ChessCoach\engine` → `PATH`.
+
+Working on the package itself:
 
 ```powershell
 git clone https://github.com/zallkyre/chessbot
 cd chessbot
 pip install -e .
 ```
-
-You also need Stockfish, which is not bundled (98 MB):
-
-```powershell
-# official build, Windows x64
-curl -L -o sf.zip https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-windows-x86-64-universal.zip
-tar -xf sf.zip
-# then point at it:
-$env:CHESSBOT_ENGINE = "C:\path\to\stockfish-windows-x86-64-universal.exe"
-```
-
-Lookup order: `CHESSBOT_ENGINE` → `engine/stockfish[.exe]` in the package →
-`%LOCALAPPDATA%\ChessCoach\engine` → `PATH`.
 
 ## Grading
 
