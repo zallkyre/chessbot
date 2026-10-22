@@ -1,0 +1,22 @@
+﻿[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chessbot"
+version = "0.1.0"
+description = "Difficulty-slider chess bot and move grader built on Stockfish"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "zallkyre" }]
+dependencies = ["python-chess>=1.10"]
+
+[project.scripts]
+chessbot = "chessbot.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/zallkyre/chessbot"
+
+[tool.setuptools.packages.find]
+include = ["chessbot*"]
