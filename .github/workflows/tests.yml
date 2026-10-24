@@ -1,0 +1,48 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Stockfish
+        run: sudo apt-get update && sudo apt-get install -y stockfish
+      - name: Install package
+        run: pip install -e .
+      - name: Test
+        env:
+          CHESSBOT_ENGINE: /usr/games/stockfish
+        run: python -m unittest discover -s tests -v
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install Stockfish
+        shell: pwsh
+        run: |
+          curl.exe -sL -o sf.zip https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-windows-x86-64-avx2.zip
+          Expand-Archive sf.zip -DestinationPath sf
+          $exe = (Get-ChildItem -Path sf -Recurse -Filter "stockfish*.exe" | Select-Object -First 1).FullName
+          if (-not $exe) { throw "no stockfish binary in the release archive" }
+          "CHESSBOT_ENGINE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Install package
+        run: pip install -e .
+      - name: Test
+        run: python -m unittest discover -s tests -v

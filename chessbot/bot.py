@@ -16,10 +16,11 @@ import random
 
 import chess
 
-from .engine import Engine
+from .engine import MATE_SCORE, Engine
 
 NOISE = 15          # centipawns of search noise we do not count against a move
 GRADE_DEPTH = 14
+MATE_LOSS_CAP = 2000   # report a missed mate as -20.0 pawns, not -100.0
 
 # depth searched, and how often the bot plays a random legal move
 LEVELS = {
@@ -50,8 +51,23 @@ PRESETS = {"beginner": 2, "casual": 5, "club": 10, "strong": 14, "ruthless": 20}
 LABELS = ("Best", "Excellent", "Good", "Inaccuracy", "Mistake", "Blunder")
 
 
-def level_info(level: int) -> dict:
-    lv = max(1, min(20, int(level)))
+def parse_level(level) -> int:
+    """Accept 1-20, a numeric string, or a preset name. Returns 1-20."""
+    if isinstance(level, str):
+        key = level.strip().lower()
+        if key in PRESETS:
+            return PRESETS[key]
+        try:
+            level = int(key)
+        except ValueError:
+            raise ValueError(
+                f"unknown level {level!r}: use 1-20 or {', '.join(PRESETS)}"
+            ) from None
+    return max(1, min(20, int(level)))
+
+
+def level_info(level) -> dict:
+    lv = parse_level(level)
     info = dict(LEVELS[lv])
     info["level"] = lv
     return info
@@ -74,16 +90,16 @@ def classify(loss: int, is_best: bool) -> str:
 
 
 class Bot:
-    def __init__(self, level: int = 5, engine: Engine | None = None,
+    def __init__(self, level: int | str = 5, engine: Engine | None = None,
                  engine_path: str | None = None, seed: int | None = None):
-        self.level = max(1, min(20, int(level)))
+        self.level = parse_level(level)
         self.engine = engine or Engine(engine_path)
         self._rng = random.Random(seed)
 
     # ---------------- moves ----------------
-    def move(self, fen: str, level: int | None = None) -> dict:
+    def move(self, fen: str, level: int | str | None = None) -> dict:
         """Pick a move for the side to move in `fen`."""
-        lv = max(1, min(20, int(level if level is not None else self.level)))
+        lv = parse_level(self.level if level is None else level)
         info = LEVELS[lv]
         board = chess.Board(fen)
 
@@ -146,11 +162,23 @@ class Bot:
             return {"error": "illegal move"}
 
         san = board.san(mv)
-        before = self.engine.analyze(fen, depth)
-        board.push(mv)
-        after = self.engine.analyze(board.fen(), depth)
-
         mover_is_white = fen.split()[1] == "w"
+        before = self.engine.analyze(fen, depth)
+        if before["timed_out"]:
+            return {"error": "engine timeout, try a lower depth"}
+
+        board.push(mv)
+        if board.is_checkmate():
+            # the mover just delivered mate: the position is worth +-MATE to them
+            after = {"cp": MATE_SCORE if mover_is_white else -MATE_SCORE,
+                     "mate": 0, "best": None, "timed_out": False}
+        elif board.is_game_over():
+            after = {"cp": 0, "mate": None, "best": None, "timed_out": False}
+        else:
+            after = self.engine.analyze(board.fen(), depth)
+            if after["timed_out"]:
+                return {"error": "engine timeout, try a lower depth"}
+
         before_pov = before["cp"] if mover_is_white else -before["cp"]
         after_pov = after["cp"] if mover_is_white else -after["cp"]
         loss = max(0, before_pov - after_pov)
@@ -159,9 +187,11 @@ class Bot:
             "san": san,
             "uci": mv.uci(),
             "loss": loss,
-            "loss_pawns": round(loss / 100, 2),
+            "loss_pawns": round(min(loss, MATE_LOSS_CAP) / 100, 2),
             "label": classify(loss, before["best"] == mv.uci()),
             "best": before["best"],
+            "mate_before": before["mate"],
+            "mate_after": after["mate"],
             "eval_before": _fmt(before["cp"]),
             "eval_after": _fmt(after["cp"]),
         }

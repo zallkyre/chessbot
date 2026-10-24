@@ -41,13 +41,22 @@ bot.move(start)
 # {'uci': 'g1f3', 'san': 'Nf3', 'level': 5, 'depth': 2, 'random': False, ...}
 
 bot.grade(start, "f2f3")
-# {'san': 'f3', 'loss': 95, 'loss_pawns': 0.95, 'label': 'Inaccuracy', 'best': 'e2e4'}
+# {'san': 'f3', 'loss': 104, 'loss_pawns': 1.04, 'label': 'Inaccuracy',
+#  'best': 'e2e4', 'mate_before': None, 'mate_after': None, ...}
 
 bot.analyze(start, depth=14)
-# {'cp': 22, 'mate': None, 'best': 'e2e4', 'eval': '+0.2'}
+# {'cp': 30, 'mate': None, 'best': 'e2e4', 'timed_out': False, 'eval': '+0.3'}
 
 bot.close()
 ```
+
+`level` accepts an int 1-20, a numeric string, or a preset name
+(`beginner`, `casual`, `club`, `strong`, `ruthless`) anywhere a level appears:
+the constructor, `move()`, `--level`, and the JSON body of `POST /move`.
+
+Both `cp` and `mate` are from **White's** point of view, so they never
+disagree about who is winning. `loss_pawns` is capped at 20.0 so a missed mate
+reads `-20.0`, not `-100.0`.
 
 With `python-chess` boards:
 
@@ -65,15 +74,20 @@ python -m chessbot --serve --port 8787
 
 | method | path | body | returns |
 |---|---|---|---|
-| GET | `/health` | | engine path, default level |
+| GET | `/health` | | engine path, default level, `busy` |
 | GET | `/levels` | | all 20 levels + presets |
 | POST | `/move` | `{"fen": "...", "level": 5}` | `{"uci","san","level","random"}` |
 | POST | `/analyze` | `{"fen": "...", "depth": 14}` | `{"cp","mate","best","eval"}` |
-| POST | `/grade` | `{"fen": "...", "move": "g1f3"}` | `{"label","loss","best"}` |
+| POST | `/grade` | `{"fen": "...", "move": "g1f3", "depth": 10}` | `{"label","loss","best"}` |
+
+Bad input is a `400` with a message, not a `500`. `OPTIONS` is answered, so a
+browser page can `POST` JSON across origins. `/analyze` and `/grade` return
+`503` with `Retry-After` while a search is already running, instead of queueing
+behind the engine lock.
 
 ```bash
 curl -s localhost:8787/move -H 'content-type: application/json' \
-  -d '{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","level":3}'
+  -d '{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","level":"club"}'
 ```
 
 CORS is open, so a browser page can call it directly. It binds `127.0.0.1`
@@ -122,8 +136,15 @@ The noise floor is the important bit. Without it, two shallow searches disagree 
 python -m unittest discover -s tests -v
 ```
 
-Engine tests skip themselves if Stockfish is not installed.
+Engine tests skip themselves if Stockfish is not installed. CI (`.github/workflows/tests.yml`)
+runs the suite on Linux (Python 3.10 and 3.13) and Windows with Stockfish
+installed.
+
+Two of those tests are regressions for a real bug: a search that ran out of
+time used to leave Stockfish mid-search, and the *next* request would report
+the previous position's score. Every search is now either finished or
+cancelled with `stop` and drained before the next one starts.
 
 ## License
 
-MIT. Stockfish is GPLv3 and is invoked as a separate process.
+MIT — see [LICENSE](LICENSE). Stockfish is GPLv3 and is invoked as a separate process.

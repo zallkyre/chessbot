@@ -8,15 +8,26 @@ version = "0.1.0"
 description = "Difficulty-slider chess bot and move grader built on Stockfish"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [{ name = "zallkyre" }]
 dependencies = ["python-chess>=1.10"]
+keywords = ["chess", "stockfish", "bot", "engine", "uci", "analysis"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Games/Entertainment :: Board Games",
+]
 
 [project.scripts]
 chessbot = "chessbot.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/zallkyre/chessbot"
+Issues = "https://github.com/zallkyre/chessbot/issues"
 
 [tool.setuptools.packages.find]
 include = ["chessbot*"]
+
+[tool.setuptools]
+license-files = ["LICENSE"]

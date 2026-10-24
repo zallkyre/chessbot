@@ -5,9 +5,9 @@
     bot.move("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 """
 
-from .bot import LEVELS, PRESETS, Bot, classify, level_info
+from .bot import LEVELS, PRESETS, Bot, classify, level_info, parse_level
 from .engine import Engine, find_engine
 
 __version__ = "0.1.0"
 __all__ = ["Bot", "Engine", "LEVELS", "PRESETS", "level_info", "classify",
-           "find_engine", "__version__"]
+           "parse_level", "find_engine", "__version__"]
