@@ -96,10 +96,10 @@ only — do not expose it to the internet as-is.
 ## Install
 
 ```powershell
-pip install "git+https://github.com/zallkyre/chessbot@v0.1.0"
+pip install "git+https://github.com/zallkyre/chessbot@v0.2.0"
 ```
 
-Pin the tag, or drop `@v0.1.0` for whatever `main` is that day. Not on PyPI.
+Pin the tag, or drop `@v0.2.0` for whatever `main` is that day. Not on PyPI.
 
 Then point it at Stockfish, which is not bundled (98 MB):
 
@@ -144,6 +144,27 @@ Two of those tests are regressions for a real bug: a search that ran out of
 time used to leave Stockfish mid-search, and the *next* request would report
 the previous position's score. Every search is now either finished or
 cancelled with `stop` and drained before the next one starts.
+
+## Changelog
+
+### 0.2.0
+
+- Fixed: a search that hit its deadline left Stockfish running, so the next
+  request reported the previous position's score and could consume a stale
+  `bestmove`. Searches are now cancelled and drained first; results carry
+  `timed_out`.
+- Preset level names (`beginner`, `casual`, `club`, `strong`, `ruthless`) work
+  in `Bot()`, `--level`, and `POST /move`.
+- `analyze()` reports `mate` from White's point of view, matching `cp`.
+- `grade()` handles checkmate and stalemate, refuses timed-out scores, and caps
+  `loss_pawns` at 20.0.
+- HTTP: `400` for bad input, `OPTIONS` preflight answered, `503` while the
+  engine is busy, `/grade` defaults to depth 10.
+- Added `LICENSE`, CI on Linux and Windows, and PyPI-ready packaging metadata.
+
+### 0.1.0
+
+- First release: 20-level difficulty slider and centipawn-loss move grading.
 
 ## License
 
