@@ -37,10 +37,22 @@ jobs:
       - name: Install Stockfish
         shell: pwsh
         run: |
-          curl.exe -sL -o sf.zip https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-windows-x86-64-avx2.zip
+          $ErrorActionPreference = "Stop"
+          # Ask the API for the asset instead of hardcoding a name: upstream
+          # renames these between releases (avx2/plain -> universal in sf_19).
+          $rel = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/official-stockfish/Stockfish/releases/latest" `
+            -Headers @{ "User-Agent" = "chessbot-ci" }
+          $asset = $rel.assets | Where-Object { $_.name -like "*windows-x86-64*" } | Select-Object -First 1
+          if (-not $asset) {
+            throw "no windows x86-64 asset in $($rel.tag_name)"
+          }
+          Write-Host "downloading $($asset.name) from $($rel.tag_name)"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile sf.zip
           Expand-Archive sf.zip -DestinationPath sf
           $exe = (Get-ChildItem -Path sf -Recurse -Filter "stockfish*.exe" | Select-Object -First 1).FullName
           if (-not $exe) { throw "no stockfish binary in the release archive" }
+          Write-Host "engine: $exe"
           "CHESSBOT_ENGINE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Install package
         run: pip install -e .
