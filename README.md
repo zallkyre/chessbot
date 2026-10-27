@@ -172,4 +172,4 @@ MIT — see [LICENSE](LICENSE). Stockfish is GPLv3 and is invoked as a separate 
 
 ---
 
-**LLM guide** — Difficulty-slider chess bot and move grader built on Stockfish · Stack: Python · Run: `pip install .` · License: MIT
+**LLM guide** — Difficulty-slider chess bot and move grader built on Stockfish · Stack: Python · Run: `pip install .` · License: MIT-0 - no conditions, resale allowed
